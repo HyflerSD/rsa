@@ -2,26 +2,24 @@ use rand::Rng;
 use std::collections::HashSet;
 
 fn main() { 
-    let v = priv_primes();
-    let p = v[0];
-    let q = v[1];
-    println!("{}--{}", p, q);
-    let n: u64 = p * q;
-    println!("{:?}", stuff(p, q, n));
+    let thing = stuff();
+    let message: u64 = 2_u64.pow(thing.e as u32) % thing.n;
+    println!("thing={:?}\nEn_message={}", thing, message);
+    let de = message.pow(thing.d as u32) % thing.n;
+    println!("decrypted={}", de);
 }
 
 #[derive(Debug)]
 struct privateKey {
-    product: u64,
     factors: Vec<u64>,
     totient: u64,
     d: u64,
     e: u64,
+    n: u64
 }
 
 #[derive(Debug)]
 struct publicKey {
-    product: u64,
     power: Vec<u64>,
     encrypt_key: u64,
 }
@@ -38,7 +36,7 @@ fn e_key(totient: u64, n: u64) -> u64{
     let mut t_divisors: HashSet<u64> = HashSet::new();
     divisors(totient, &mut t_divisors);
     divisors(n, &mut t_divisors);
-        println!("temp_e={} divisors={:?} orig_num{}", temp_e, t_divisors, totient);
+        //println!("temp_e={} divisors={:?} orig_num{}", temp_e, t_divisors, totient);
     for num in 2..=temp_e {
         if gcd(&num, &t_divisors) {
             possible_e.push(num);
@@ -47,7 +45,7 @@ fn e_key(totient: u64, n: u64) -> u64{
     //panic!("possible e's={:?}\nt_divs={:?}", possible_e, t_divisors);
 
     let idx = rand::thread_rng().gen_range(0..possible_e.len());
-    possible_e[idx]
+    possible_e[0]
 }
 
 fn gcd(number: &u64, t_divisors: &HashSet<u64>) -> bool {
@@ -76,12 +74,12 @@ fn divisors(val: u64, divs: &mut HashSet<u64>) -> &HashSet<u64> {
 }
 
 fn priv_primes() -> Vec<u64> {
-    let mut p1: Option<u64> = generate_prime(100);
-    let mut p2: Option<u64> = generate_prime(100);
+    let mut p1: Option<u64> = generate_prime(7);
+    let mut p2: Option<u64> = generate_prime(7);
 
     while Some(p2) == Some(p1) {
         //println!("{:?} {:?}", p1, p2);
-        p2 = generate_prime(100 as u64);
+        p2 = generate_prime(7 as u64);
     }
     let p1: u64 = p1.expect("message");
     let p2: u64 = p2.expect("message");
@@ -90,32 +88,39 @@ fn priv_primes() -> Vec<u64> {
 
 //de(mod t(n)) = 1
 fn d_key(totient: u64, e: u64) -> u64 {
-    let randy = rand::thread_rng().gen_range(30..=3000);
     let mut possible_d = Vec::new();
-    for num in 20..=randy {
+    for num in e..totient {
         if e*num % totient == 1 {
+            println!("pattern={:?}", num);
             possible_d.push(num);
         }
     }
-
-    println!("possible d={:?}", possible_d);
+    println!("ppossible_d={:?}", possible_d);
     let idx = rand::thread_rng().gen_range(0..possible_d.len());
-    possible_d[idx]
+    possible_d[0]
 }
 
-fn stuff(p: u64, q: u64, n: u64) -> privateKey {
+fn stuff() -> privateKey {
+    let v = priv_primes();
+    let p = v[0];
+    let q = v[1];
+    let n = p*q;
+    println!("p={} q={} -- n={}", p, q, n);
     let t: u64 = totient(p, q);
-    println!("totient={}", t);
+    //println!("totient={}", t);
     let e: u64 = e_key(t, n);
     let  d: u64 = d_key(t, e);
 
-    privateKey {
-        product: n,
+    let s = privateKey {
         factors: vec![p, q],
         totient: t,
         d: d,
         e: e,
-    }
+        n: p * q
+    };
+    println!("{:?}", s);
+    s
+    
 }
 
 fn generate_prime(limit: u64) -> Option<u64> {
@@ -144,7 +149,7 @@ fn generate_prime(limit: u64) -> Option<u64> {
             //println!("{}", num);
         }
     }
-    println!("prime list -> {:?}", prime_list);
+    //println!("prime list -> {:?}", prime_list);
     let idx: usize = rand::thread_rng().gen_range(0..prime_list.len());
 
     Some(prime_list[idx])
